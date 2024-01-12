@@ -44,6 +44,14 @@ const String exampleJsonData = '''
 ]
 ''';
 
+const String exampleJsonData2 = '''
+[
+    {"y": 8},
+    {"y": 10},
+    {"y": 1}
+]
+''';
+
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
@@ -65,7 +73,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(8.0),
-                child: BarChartWidget(),
+                child: BarChartWidget(jsonData: exampleJsonData2),
               ),
             ),
             Expanded(
@@ -197,91 +205,61 @@ class LineChartWidget extends StatelessWidget {
 }
 
 class BarChartWidget extends StatelessWidget {
-  const BarChartWidget({super.key});
+  final String jsonData;
+
+  const BarChartWidget({super.key, required this.jsonData});
 
   @override
   Widget build(BuildContext context) {
+    // 解析JSON數據
+    var data = jsonDecode(jsonData);
+    var barGroups = _convertJsonToBarGroups(data);
+
     return BarChart(
       BarChartData(
         alignment: BarChartAlignment.spaceAround,
-        maxY: 20,
-        barTouchData: BarTouchData(
-          enabled: false,
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: SideTitles(
-            showTitles: true,
-            getTextStyles: (context, value) => const TextStyle(
-                color: Color(0xff7589a2),
-                fontWeight: FontWeight.bold,
-                fontSize: 14),
-            margin: 20,
-            getTitles: (double value) {
-              switch (value.toInt()) {
-                case 0:
-                  return 'M';
-                case 1:
-                  return 'T';
-                case 2:
-                  return 'W';
-                case 3:
-                  return 'T';
-                case 4:
-                  return 'F';
-                case 5:
-                  return 'S';
-                case 6:
-                  return 'S';
-              }
-              return '';
-            },
-          ),
-          leftTitles: SideTitles(showTitles: false),
-        ),
-        borderData: FlBorderData(
-          show: false,
-        ),
-        barGroups: [
-          BarChartGroupData(x: 0, barRods: [
-            BarChartRodData(y: 8, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 1, barRods: [
-            BarChartRodData(y: 10, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 2, barRods: [
-            BarChartRodData(y: 14, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 3, barRods: [
-            BarChartRodData(y: 15, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 4, barRods: [
-            BarChartRodData(y: 13, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 5, barRods: [
-            BarChartRodData(y: 10, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-          BarChartGroupData(x: 6, barRods: [
-            BarChartRodData(y: 5, colors: [Colors.lightBlueAccent])
-          ], showingTooltipIndicators: [
-            0
-          ]),
-        ],
+        maxY: _calculateMaxY(barGroups), // 根據數據動態計算maxY
+        barTouchData: BarTouchData(enabled: false),
+        titlesData: _buildTitlesData(),
+        borderData: FlBorderData(show: false),
+        barGroups: barGroups,
       ),
     );
   }
+
+  // 將JSON數據轉換為BarChart所需的格式
+  List<BarChartGroupData> _convertJsonToBarGroups(dynamic data) {
+    List<BarChartGroupData> barGroups = [];
+    for (var i = 0; i < data.length; i++) {
+      var record = data[i];
+      double y = record['y'].toDouble();
+      barGroups.add(
+        BarChartGroupData(
+          x: i,
+          barRods: [
+            BarChartRodData(y: y, colors: [Colors.lightBlueAccent])
+          ],
+          showingTooltipIndicators: [0],
+        ),
+      );
+    }
+    return barGroups;
+  }
+
+  // 計算maxY值
+  double _calculateMaxY(List<BarChartGroupData> barGroups) {
+    double maxY = 0;
+    for (var group in barGroups) {
+      for (var rod in group.barRods) {
+        if (rod.y > maxY) maxY = rod.y;
+      }
+    }
+    return maxY;
+  }
+
+  FlTitlesData _buildTitlesData() => FlTitlesData(
+        show: true,
+      );
 }
 
 class PieChartWidget extends StatelessWidget {
