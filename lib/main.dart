@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
@@ -29,6 +32,18 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+const String exampleJsonData = '''
+[
+  {"x": 0, "y": 0},
+  {"x": 1, "y": 2},
+  {"x": 2, "y": 5},
+  {"x": 3, "y": 3},
+  {"x": 4, "y": 4},
+  {"x": 5, "y": 3},
+  {"x": 6, "y": 4}
+]
+''';
+
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
@@ -44,7 +59,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(8.0),
-                child: LineChartWidget(),
+                child: LineChartWidget(jsonData: exampleJsonData),
               ),
             ),
             Expanded(
@@ -72,110 +87,113 @@ List<Color> gradientColors = [
 ];
 
 class LineChartWidget extends StatelessWidget {
-  const LineChartWidget({super.key});
+  final String jsonData;
+
+  const LineChartWidget({super.key, required this.jsonData});
 
   @override
   Widget build(BuildContext context) {
+    // 解析JSON數據
+    var data = jsonDecode(jsonData);
+    var lineBarsData = _convertJsonToLineBarsData(data);
+    // 計算minX, maxX, minY, maxY
+    double minX =
+        lineBarsData.isNotEmpty ? lineBarsData.first.spots.first.x : 0;
+    double maxX = minX;
+    double minY =
+        lineBarsData.isNotEmpty ? lineBarsData.first.spots.first.y : 0;
+    double maxY = minY;
+
+    for (var barData in lineBarsData) {
+      for (var spot in barData.spots) {
+        minX = min(minX, spot.x);
+        maxX = max(maxX, spot.x);
+        minY = min(minY, spot.y);
+        maxY = max(maxY, spot.y);
+      }
+    }
+
     return LineChart(
       LineChartData(
-        gridData: FlGridData(
-          show: false,
-          drawVerticalLine: true,
-          getDrawingHorizontalLine: (value) {
-            return FlLine(
-              color: const Color(0xff37434d),
-              strokeWidth: 1,
-            );
-          },
-          getDrawingVerticalLine: (value) {
-            return FlLine(
-              color: const Color(0xff37434d),
-              strokeWidth: 1,
-            );
-          },
-        ),
-        titlesData: FlTitlesData(
-          show: true,
-          bottomTitles: SideTitles(
-            showTitles: true,
-            reservedSize: 22,
-            getTextStyles: (context, value) => const TextStyle(
-              color: Color(0xff68737d),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-            getTitles: (value) {
-              switch (value.toInt()) {
-                case 2:
-                  return 'MAR';
-                case 5:
-                  return 'JUN';
-                case 8:
-                  return 'SEP';
-              }
-              return '';
-            },
-            margin: 8,
-          ),
-          leftTitles: SideTitles(
-            showTitles: true,
-            getTextStyles: (context, value) => const TextStyle(
-              color: Color(0xff67727d),
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-            getTitles: (value) {
-              switch (value.toInt()) {
-                case 1:
-                  return '10k';
-                case 3:
-                  return '30k';
-                case 5:
-                  return '50k';
-              }
-              return '';
-            },
-            reservedSize: 28,
-            margin: 12,
-          ),
-        ),
-        borderData: FlBorderData(
-          show: true,
-          border: Border.all(color: const Color(0xff37434d), width: 1),
-        ),
-        minX: 0,
-        maxX: 11,
-        minY: 0,
-        maxY: 6,
-        lineBarsData: [
-          LineChartBarData(
-            spots: [
-              FlSpot(0, 3),
-              FlSpot(2.6, 2),
-              FlSpot(4.9, 5),
-              FlSpot(6.8, 3.1),
-              FlSpot(8, 4),
-              FlSpot(9.5, 3),
-              FlSpot(11, 4),
-            ],
-            isCurved: true,
-            colors: gradientColors,
-            barWidth: 5,
-            isStrokeCapRound: true,
-            dotData: FlDotData(
-              show: false,
-            ),
-            belowBarData: BarAreaData(
-              show: true,
-              colors: gradientColors
-                  .map((color) => color.withOpacity(0.3))
-                  .toList(),
-            ),
-          ),
-        ],
+        gridData: _buildGridData(),
+        titlesData: _buildTitlesData(),
+        borderData: _buildBorderData(),
+        minX: minX,
+        maxX: maxX,
+        minY: minY,
+        maxY: maxY,
+        lineBarsData: lineBarsData,
       ),
     );
   }
+
+  // 將JSON數據轉換為LineChart所需的格式
+  List<LineChartBarData> _convertJsonToLineBarsData(dynamic data) {
+    List<FlSpot> spots = [];
+    for (var record in data) {
+      double x = record['x'].toDouble();
+      double y = record['y'].toDouble();
+      spots.add(FlSpot(x, y));
+    }
+
+    return [
+      LineChartBarData(
+        spots: spots,
+        isCurved: true,
+        colors: gradientColors, // 確保gradientColors已定義
+        barWidth: 5,
+        isStrokeCapRound: true,
+        dotData: FlDotData(show: false),
+        belowBarData: BarAreaData(
+          show: true,
+          colors:
+              gradientColors.map((color) => color.withOpacity(0.3)).toList(),
+        ),
+      ),
+    ];
+  }
+
+  FlGridData _buildGridData() => FlGridData(
+        show: false,
+        drawVerticalLine: true,
+        getDrawingHorizontalLine: (value) => FlLine(
+          color: const Color(0xff37434d),
+          strokeWidth: 1,
+        ),
+        getDrawingVerticalLine: (value) => FlLine(
+          color: const Color(0xff37434d),
+          strokeWidth: 1,
+        ),
+      );
+
+  FlTitlesData _buildTitlesData() => FlTitlesData(
+        show: true,
+        bottomTitles: SideTitles(
+          showTitles: true,
+          reservedSize: 22,
+          getTextStyles: (context, value) => const TextStyle(
+            color: Color(0xff68737d),
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+          margin: 8,
+        ),
+        leftTitles: SideTitles(
+          showTitles: true,
+          getTextStyles: (context, value) => const TextStyle(
+            color: Color(0xff67727d),
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
+          reservedSize: 28,
+          margin: 12,
+        ),
+      );
+
+  FlBorderData _buildBorderData() => FlBorderData(
+        show: true,
+        border: Border.all(color: const Color(0xff37434d), width: 1),
+      );
 }
 
 class BarChartWidget extends StatelessWidget {
