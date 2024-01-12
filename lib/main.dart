@@ -52,6 +52,15 @@ const String exampleJsonData2 = '''
 ]
 ''';
 
+const String exampleJsonData3 = '''
+[
+    {"title": "A", "value": 40, "color": "blue"},
+    {"title": "B", "value": 30},
+    {"title": "C", "value": 15, "color": "green"},
+    {"title": "D", "value": 15}
+]
+''';
+
 class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
@@ -79,7 +88,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Expanded(
               child: Padding(
                 padding: EdgeInsets.all(8.0),
-                child: PieChartWidget(),
+                child: PieChartWidget(jsonData: exampleJsonData3),
               ),
             ),
           ],
@@ -263,21 +272,64 @@ class BarChartWidget extends StatelessWidget {
 }
 
 class PieChartWidget extends StatelessWidget {
-  const PieChartWidget({super.key});
+  final String jsonData;
+
+  const PieChartWidget({super.key, required this.jsonData});
 
   @override
   Widget build(BuildContext context) {
+    var data = jsonDecode(jsonData);
+    var sections = _convertJsonToPieChartSections(data);
+
     return PieChart(
-      PieChartData(centerSpaceRadius: 40, sections: [
+      PieChartData(centerSpaceRadius: 40, sections: sections),
+    );
+  }
+
+  // 將JSON數據轉換為PieChart的sections
+  List<PieChartSectionData> _convertJsonToPieChartSections(dynamic data) {
+    List<PieChartSectionData> sections = [];
+    for (var item in data) {
+      var title = item['title'];
+      var value = item['value'].toDouble();
+      var color = _getColorFromString(item['color']);
+
+      sections.add(
         PieChartSectionData(
-            value: 40, color: Colors.blue, title: 'Blue', radius: 50),
-        PieChartSectionData(
-            value: 30, color: Colors.orange, title: 'Orange', radius: 50),
-        PieChartSectionData(
-            value: 15, color: Colors.green, title: 'Green', radius: 50),
-        PieChartSectionData(
-            value: 15, color: Colors.red, title: 'Red', radius: 50),
-      ]),
+          title: title,
+          value: value,
+          color: color,
+          radius: 50,
+        ),
+      );
+    }
+    return sections;
+  }
+
+  // 將字符串顏色轉換為Flutter顏色
+  Color _getColorFromString(String? colorStr) {
+    switch (colorStr) {
+      case 'blue':
+        return Colors.blue;
+      case 'orange':
+        return Colors.orange;
+      case 'green':
+        return Colors.green;
+      case 'red':
+        return Colors.red;
+      default:
+        return _getRandomColor();
+    }
+  }
+
+  // 生成隨機顏色
+  Color _getRandomColor() {
+    Random random = Random();
+    return Color.fromRGBO(
+      random.nextInt(256),
+      random.nextInt(256),
+      random.nextInt(256),
+      1,
     );
   }
 }
